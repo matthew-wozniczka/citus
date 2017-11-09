@@ -16,6 +16,7 @@ use warnings;
 
 use Fcntl;
 use Getopt::Long;
+use File::Spec::Functions;
 
 
 sub Usage()
@@ -117,8 +118,8 @@ if (defined $bindir)
 # a bit more context to make it easier to locate failed test sections.
 $ENV{PG_REGRESS_DIFF_OPTS} = '-dU10';
 
-my $plainRegress = "$pgxsdir/src/test/regress/pg_regress";
-my $isolationRegress = "${postgresBuilddir}/src/test/isolation/pg_isolation_regress";
+my $plainRegress = catfile("$pgxsdir", "src", "test", "regress", "pg_regress");
+my $isolationRegress = catfile("${postgresBuilddir}", "src", "test", "isolation", "pg_isolation_regress");
 if ($isolationtester && ! -f "$isolationRegress")
 {
     die <<"MESSAGE";
@@ -136,7 +137,7 @@ directory is present locally
 MESSAGE
 }
 
-my $vanillaRegress = "${postgresBuilddir}/src/test/regress/pg_regress";
+my $vanillaRegress = catfile("${postgresBuilddir}", "src", "test", "regress", "pg_regress");
 if ($vanillatest && ! -f "$vanillaRegress")
 {
     die <<"MESSAGE";
@@ -164,18 +165,18 @@ if (defined $pgCtlTimeout)
 # only reliable way to do this.
 sub replace_postgres
 {
-    if (-e "$bindir/postgres.orig")
+    if (-e catfile("$bindir", "postgres.orig"))
     {
 	print "wrapper exists\n";
     }
     else
     {
 	print "moving $bindir/postgres to $bindir/postgres.orig\n";
-	rename "$bindir/postgres", "$bindir/postgres.orig"
+	rename catfile("$bindir", "postgres"), catfile("$bindir", "postgres.orig")
 	    or die "Could not move postgres out of the way";
     }
 
-    sysopen my $fh, "$bindir/postgres", O_CREAT|O_TRUNC|O_RDWR, 0700
+    sysopen my $fh, catfile("$bindir", "postgres"), O_CREAT|O_TRUNC|O_RDWR, 0700
 	or die "Could not create postgres wrapper at $bindir/postgres";
     print $fh <<"END";
 #!/bin/bash
@@ -195,11 +196,11 @@ END
 # revert changes replace_postgres() performed
 sub revert_replace_postgres
 {
-    if (-e "$bindir/postgres.orig")
+    if (-e catfile("$bindir", "postgres.orig"))
     {
 	print "wrapper exists, removing\n";
 	print "moving $bindir/postgres.orig to $bindir/postgres\n";
-	rename "$bindir/postgres.orig", "$bindir/postgres"
+	rename catfile("$bindir", "postgres.orig"), catfile("$bindir", "postgres")
 	    or die "Could not move postgres back";
     }
 }
@@ -295,24 +296,24 @@ for my $option (@userPgOptions)
 %fdwServers = ('fake_fdw_server', 'fake_fdw');
 
 # Cleanup leftovers and prepare directories for the run
-system("rm", ('-rf', 'tmp_check/tmp-bin')) == 0 or die "Could not remove tmp-bin directory";
+system("rm", ('-rf', catfile('tmp_check', 'tmp-bin'))) == 0 or die "Could not remove tmp-bin directory";
 
-system("rm", ('-rf', 'tmp_check/master')) == 0 or die "Could not remove master directory";
+system("rm", ('-rf', catfile('tmp_check', 'master'))) == 0 or die "Could not remove master directory";
 for my $port (@workerPorts)
 {
-    system("rm", ('-rf', "tmp_check/worker.$port")) == 0 or die "Could not remove worker directory";
+    system("rm", ('-rf', catfile("tmp_check", "worker.$port"))) == 0 or die "Could not remove worker directory";
 }
 
-system("rm", ('-rf', 'tmp_check/master-follower')) == 0 or die "Could not remove master directory";
+system("rm", ('-rf', catfile('tmp_check', 'master-follower'))) == 0 or die "Could not remove master directory";
 for my $port (@followerWorkerPorts)
 {
-    system("rm", ('-rf', "tmp_check/follower.$port")) == 0 or die "Could not remove worker directory";
+    system("rm", ('-rf', catfile("tmp_check", "follower.$port"))) == 0 or die "Could not remove worker directory";
 }
 
 # Prepare directory in which 'psql' has some helpful variables for locating the workers
-system("mkdir", ('-p', "tmp_check/tmp-bin")) == 0
+system("mkdir", ('-p', catfile("tmp_check", "tmp-bin"))) == 0
 	or die "Could not create tmp-bin directory";
-sysopen my $fh, "tmp_check/tmp-bin/psql", O_CREAT|O_TRUNC|O_RDWR, 0700
+sysopen my $fh, catfile("tmp_check", "tmp-bin", "psql"), O_CREAT|O_TRUNC|O_RDWR, 0700
 	or die "Could not create psql wrapper";
 print $fh "#!/bin/bash\n";
 print $fh "exec psql ";
@@ -333,31 +334,31 @@ for my $workeroff (0 .. $#followerWorkerPorts)
 print $fh "\"\$@\"\n"; # pass on the commandline arguments
 close $fh;
 
-system("mkdir", ('-p', 'tmp_check/master/log')) == 0 or die "Could not create master directory";
+system("mkdir", ('-p', catfile('tmp_check', 'master', 'log'))) == 0 or die "Could not create master directory";
 for my $port (@workerPorts)
 {
-    system("mkdir", ('-p', "tmp_check/worker.$port/log")) == 0
+    system("mkdir", ('-p', catfile("tmp_check", "worker.$port", "log"))) == 0
         or die "Could not create worker directory";
 }
 
 if ($followercluster)
 {
-    system("mkdir", ('-p', 'tmp_check/master-follower/log')) == 0 or die "Could not create follower directory";
+    system("mkdir", ('-p', catfile('tmp_check', 'master-follower', 'log'))) == 0 or die "Could not create follower directory";
     for my $port (@followerWorkerPorts)
     {
-        system("mkdir", ('-p', "tmp_check/follower.$port/log")) == 0
+        system("mkdir", ('-p', catfile("tmp_check", "follower.$port", "log"))) == 0
             or die "Could not create worker directory";
     }
 }
 
 # Create new data directories, copy workers for speed
-system("$bindir/initdb", ("--nosync", "-U", $user, "tmp_check/master/data")) == 0
+system(catfile("$bindir", "initdb"), ("--nosync", "-U", $user, catfile("tmp_check", "master", "data"))) == 0
     or die "Could not create master data directory";
 
 if ($followercluster)
 {
   # This is only necessary on PG 9.6 but it doesn't hurt PG 10
-  open(my $fd, ">>", "tmp_check/master/data/pg_hba.conf")
+  open(my $fd, ">>", catfile("tmp_check", "master", "data", "pg_hba.conf"))
     or die "could not open pg_hba.conf";
   print $fd "\nhost replication postgres 127.0.0.1/32 trust";
   close $fd;
@@ -365,7 +366,7 @@ if ($followercluster)
 
 for my $port (@workerPorts)
 {
-    system("cp -a tmp_check/master/data tmp_check/worker.$port/data") == 0
+    system("cp", ("-a", catfile("tmp_check", "master", "data"), catfile("tmp_check", "worker.$port", "data"))) == 0
         or die "Could not create worker data directory";
 }
 
@@ -374,27 +375,27 @@ sub ShutdownServers()
 {
     if ($serversAreShutdown eq "FALSE")
     {
-        system("$bindir/pg_ctl",
-               ('stop', '-w', '-D', 'tmp_check/master/data')) == 0
+        system(catfile("$bindir", "pg_ctl"),
+               ('stop', '-w', '-D', catfile('tmp_check', 'master', 'data'))) == 0
             or warn "Could not shutdown worker server";
 
         for my $port (@workerPorts)
         {
-            system("$bindir/pg_ctl",
-                   ('stop', '-w', '-D', "tmp_check/worker.$port/data")) == 0
+            system(catfile("$bindir", "pg_ctl"),
+                   ('stop', '-w', '-D', catfile("tmp_check", "worker.$port", "data"))) == 0
                 or warn "Could not shutdown worker server";
         }
 
         if ($followercluster)
         {
-            system("$bindir/pg_ctl",
-                   ('stop', '-w', '-D', 'tmp_check/master-follower/data')) == 0
+            system(catfile("$bindir", "pg_ctl"),
+                   ('stop', '-w', '-D', catfile('tmp_check', 'master-follower', 'data'))) == 0
                 or warn "Could not shutdown worker server";
 
             for my $port (@followerWorkerPorts)
             {
-                system("$bindir/pg_ctl",
-                       ('stop', '-w', '-D', "tmp_check/follower.$port/data")) == 0
+                system(catfile("$bindir", "pg_ctl"),
+                       ('stop', '-w', '-D', catfile("tmp_check", "follower.$port", "data"))) == 0
                     or warn "Could not shutdown worker server";
             }
         }
@@ -433,24 +434,24 @@ if ($valgrind)
 $serversAreShutdown = "FALSE";
 
 # Start servers
-if(system("$bindir/pg_ctl",
+if(system(catfile("$bindir", "pg_ctl"),
        ('start', '-w',
         '-o', join(" ", @pgOptions)." -c port=$masterPort",
-       '-D', 'tmp_check/master/data', '-l', 'tmp_check/master/log/postmaster.log')) != 0)
+       '-D', catfile('tmp_check', 'master', 'data'), '-l', catfile('tmp_check', 'master', 'log', 'postmaster.log'))) != 0)
 {
-  system("tail", ("-n20", "tmp_check/master/log/postmaster.log"));
+  system("tail", ("-n20", catfile("tmp_check", "master", "log", "postmaster.log")));
   die "Could not start master server";
 }
 
 for my $port (@workerPorts)
 {
-    if(system("$bindir/pg_ctl",
+    if(system(catfile("$bindir", "pg_ctl"),
            ('start', '-w',
             '-o', join(" ", @pgOptions)." -c port=$port",
-            '-D', "tmp_check/worker.$port/data",
-            '-l', "tmp_check/worker.$port/log/postmaster.log")) != 0)
+            '-D', catfile("tmp_check", "worker.$port", "data"),
+            '-l', catfile("tmp_check", "worker.$port", "log", "postmaster.log"))) != 0)
     {
-      system("tail", ("-n20", "tmp_check/worker.$port/log/postmaster.log"));
+      system("tail", ("-n20", catfile("tmp_check", "worker.$port", "log", "postmaster.log")));
       die "Could not start worker server";
     }
 }
@@ -460,8 +461,8 @@ if ($followercluster)
 {
     # This test would run faster on PG10 if we could pass --no-sync here but that flag
     # isn't supported on PG 9.6. In a year when we drop support for PG9.6 add that flag!
-    system("$bindir/pg_basebackup",
-           ("-D", "tmp_check/master-follower/data", "--host=$host", "--port=$masterPort",
+    system(catfile("$bindir", "pg_basebackup"),
+           ("-D", catfile("tmp_check", "master-follower", "data"), "--host=$host", "--port=$masterPort",
             "--username=$user", "-R", "-X", "stream")) == 0
       or die 'could not take basebackup';
 
@@ -469,30 +470,30 @@ if ($followercluster)
     {
         my $workerPort = $workerPorts[$offset];
         my $followerPort = $followerWorkerPorts[$offset];
-        system("$bindir/pg_basebackup",
-               ("-D", "tmp_check/follower.$followerPort/data", "--host=$host", "--port=$workerPort",
+        system(catfile("$bindir", "pg_basebackup"),
+               ("-D", catfile("tmp_check", "follower.$followerPort", "data"), "--host=$host", "--port=$workerPort",
                 "--username=$user", "-R", "-X", "stream")) == 0
             or die "Could not take basebackup";
     }
 
-    if(system("$bindir/pg_ctl",
+    if(system(catfile("$bindir", "pg_ctl"),
            ('start', '-w',
             '-o', join(" ", @pgOptions)." -c port=$followerCoordPort",
-           '-D', 'tmp_check/master-follower/data', '-l', 'tmp_check/master-follower/log/postmaster.log')) != 0)
+           '-D', catfile('tmp_check', 'master-follower', 'data'), '-l', catfile('tmp_check', 'master-follower', 'log', 'postmaster.log'))) != 0)
     {
-      system("tail", ("-n20", "tmp_check/master-follower/log/postmaster.log"));
+      system("tail", ("-n20", catfile("tmp_check", "master-follower", "log", "postmaster.log")));
       die "Could not start master follower server";
     }
 
     for my $port (@followerWorkerPorts)
     {
-        if(system("$bindir/pg_ctl",
+        if(system(catfile("$bindir", "pg_ctl"),
                ('start', '-w',
                 '-o', join(" ", @pgOptions)." -c port=$port",
-                '-D', "tmp_check/follower.$port/data",
-                '-l', "tmp_check/follower.$port/log/postmaster.log")) != 0)
+                '-D', catfile("tmp_check", "follower.$port", "data"),
+                '-l', catfile("tmp_check", "follower.$port", "log", "postmaster.log"))) != 0)
         {
-          system("tail", ("-n20", "tmp_check/follower.$port/log/postmaster.log"));
+          system("tail", ("-n20", catfile("tmp_check", "follower.$port", "log", "postmaster.log")));
           die "Could not start follower server";
 	}
     }
@@ -563,7 +564,7 @@ my @arguments = (
     "--host", $host,
     '--port', $masterPort,
     '--user', $user,
-    '--bindir', "tmp_check/tmp-bin"
+    '--bindir', catfile("tmp_check", "tmp-bin")
 );
 
 # Add load extension parameters to the argument list
@@ -584,7 +585,7 @@ if ($vanillatest)
     $ENV{PGPORT} = $masterPort;
     $ENV{PGUSER} = $user;
 
-    system("make -C $postgresBuilddir/src/test/regress installcheck-parallel") == 0
+    system("make", ("-C", catfile("$postgresBuilddir", "src", "test", "regress"), "installcheck-parallel")) == 0
     or die "Could not run vanilla tests";
 }
 elsif ($isolationtester)
