@@ -17,6 +17,7 @@ use warnings;
 use Fcntl;
 use Getopt::Long;
 use File::Spec::Functions;
+use File::Path qw(make_path);
 
 
 sub Usage()
@@ -118,7 +119,7 @@ if (defined $bindir)
 # a bit more context to make it easier to locate failed test sections.
 $ENV{PG_REGRESS_DIFF_OPTS} = '-dU10';
 
-my $plainRegress = catfile("$pgxsdir", "src", "test", "regress", "pg_regress");
+my $plainRegress = "C:\\Users\\Administrator\\Downloads\\patched-postgres\\Debug\\pg_regress\\pg_regress.exe";
 my $isolationRegress = catfile("${postgresBuilddir}", "src", "test", "isolation", "pg_isolation_regress");
 if ($isolationtester && ! -f "$isolationRegress")
 {
@@ -231,7 +232,7 @@ my $user = "postgres";
 my @pgOptions = ();
 
 # Postgres options set for the tests
-push(@pgOptions, '-c', "listen_addresses='${host}'");
+push(@pgOptions, '-c', "listen_addresses=${host}");
 # not required, and we don't necessarily have access to the default directory
 push(@pgOptions, '-c', "unix_socket_directories=");
 push(@pgOptions, '-c', "fsync=off");
@@ -313,10 +314,10 @@ for my $port (@followerWorkerPorts)
 # Prepare directory in which 'psql' has some helpful variables for locating the workers
 system("mkdir", ('-p', catfile("tmp_check", "tmp-bin"))) == 0
 	or die "Could not create tmp-bin directory";
-sysopen my $fh, catfile("tmp_check", "tmp-bin", "psql"), O_CREAT|O_TRUNC|O_RDWR, 0700
+sysopen my $fh, catfile("tmp_check", "tmp-bin", "psql.cmd"), O_CREAT|O_TRUNC|O_RDWR, 0700
 	or die "Could not create psql wrapper";
-print $fh "#!/bin/bash\n";
-print $fh "exec psql ";
+print $fh "\@echo off\n";
+print $fh catfile($bindir, "psql")." ";
 print $fh "--variable=master_port=$masterPort ";
 print $fh "--variable=follower_master_port=$followerCoordPort ";
 print $fh "--variable=default_user=$user ";
@@ -331,22 +332,23 @@ for my $workeroff (0 .. $#followerWorkerPorts)
 	my $port = $followerWorkerPorts[$workeroff];
 	print $fh "--variable=follower_worker_".($workeroff+1)."_port=$port ";
 }
-print $fh "\"\$@\"\n"; # pass on the commandline arguments
+#print $fh "\$@\n"; # pass on the commandline arguments
+print $fh "%*\n"; # pass on the commandline arguments
 close $fh;
 
-system("mkdir", ('-p', catfile('tmp_check', 'master', 'log'))) == 0 or die "Could not create master directory";
+make_path(catfile('tmp_check', 'master', 'log')) or die 'Could not create master directory';
 for my $port (@workerPorts)
 {
-    system("mkdir", ('-p', catfile("tmp_check", "worker.$port", "log"))) == 0
+    make_path(catfile("tmp_check", "worker.$port", "log"))
         or die "Could not create worker directory";
 }
 
 if ($followercluster)
 {
-    system("mkdir", ('-p', catfile('tmp_check', 'master-follower', 'log'))) == 0 or die "Could not create follower directory";
+    make_path(catfile('tmp_check', 'master-follower', 'log')) or die "Could not create follower directory";
     for my $port (@followerWorkerPorts)
     {
-        system("mkdir", ('-p', catfile("tmp_check", "follower.$port", "log"))) == 0
+        make_path(catfile("tmp_check", "follower.$port", "log")) == 0
             or die "Could not create worker directory";
     }
 }
@@ -505,55 +507,55 @@ if ($followercluster)
 ###
 for my $port (@workerPorts)
 {
-    system("psql", '-X',
-           ('-h', $host, '-p', $port, '-U', $user, "postgres",
+    system(catfile($bindir, "psql"),
+           ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "postgres",
             '-c', "CREATE DATABASE regression;")) == 0
         or die "Could not create regression database on worker";
 
     for my $extension (@extensions)
     {
-        system("psql", '-X',
-               ('-h', $host, '-p', $port, '-U', $user, "regression",
-                '-c', "CREATE EXTENSION IF NOT EXISTS \"$extension\";")) == 0
+        system(catfile($bindir, "psql"),
+               ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
+                '-c', "\"CREATE EXTENSION IF NOT EXISTS \\\"$extension\\\";\"")) == 0
             or die "Could not create extension on worker";
     }
 
     foreach my $dataType (keys %dataTypes)
     {
-        system("psql", '-X',
-                ('-h', $host, '-p', $port, '-U', $user, "regression",
+        system(catfile($bindir, "psql"),
+                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
                  '-c', "CREATE TYPE $dataType AS $dataTypes{$dataType};")) == 0
             or die "Could not create TYPE $dataType on worker";
     }
 
     foreach my $function (keys %functions)
     {
-        system("psql", '-X',
-                ('-h', $host, '-p', $port, '-U', $user, "regression",
+        system(catfile($bindir, "psql"),
+                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
                  '-c', "CREATE FUNCTION $function RETURNS $functions{$function};")) == 0
             or die "Could not create FUNCTION $function on worker";
     }
 
     foreach my $operator (keys %operators)
     {
-        system("psql", '-X',
-                ('-h', $host, '-p', $port, '-U', $user, "regression",
+        system(catfile($bindir, "psql"),
+                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
                  '-c', "CREATE OPERATOR $operator $operators{$operator};")) == 0
             or die "Could not create OPERATOR $operator on worker";
     }
 
     foreach my $fdw (keys %fdws)
     {
-        system("psql", '-X',
-                ('-h', $host, '-p', $port, '-U', $user, "regression",
+        system(catfile($bindir, "psql"),
+                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
                  '-c', "CREATE FOREIGN DATA WRAPPER $fdw HANDLER $fdws{$fdw};")) == 0
             or die "Could not create foreign data wrapper $fdw on worker";
     }
 
     foreach my $fdwServer (keys %fdwServers)
     {
-        system("psql", '-X',
-                ('-h', $host, '-p', $port, '-U', $user, "regression",
+        system(catfile($bindir, "psql"),
+                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
                  '-c', "CREATE SERVER $fdwServer FOREIGN DATA WRAPPER $fdwServers{$fdwServer};")) == 0
             or die "Could not create server $fdwServer on worker";
     }
@@ -564,6 +566,7 @@ my @arguments = (
     "--host", $host,
     '--port', $masterPort,
     '--user', $user,
+#    '--bindir', 'C:\Users\Administrator\Downloads\pg-64\bin',
     '--bindir', catfile("tmp_check", "tmp-bin")
 );
 
