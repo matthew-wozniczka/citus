@@ -354,7 +354,7 @@ if ($followercluster)
 }
 
 # Create new data directories, copy workers for speed
-system(catfile("$bindir", "initdb"), ("--nosync", "-U", $user, catfile("tmp_check", "master", "data"))) == 0
+system(catfile("$bindir", "initdb"), ("--nosync", "-U", $user, "--encoding", "UTF8", catfile("tmp_check", "master", "data"))) == 0
     or die "Could not create master data directory";
 
 if ($followercluster)
