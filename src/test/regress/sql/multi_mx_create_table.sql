@@ -50,7 +50,7 @@ CREATE OPERATOR citus_mx_test_schema.=== (
 );
 
 SET search_path TO public;
-CREATE COLLATION citus_mx_test_schema.english FROM "en_US";
+CREATE COLLATION citus_mx_test_schema.english (LOCALE="us");
 
 CREATE TYPE citus_mx_test_schema.new_composite_type as (key1 text, key2 text);
 CREATE TYPE order_side_mx AS ENUM ('buy', 'sell');
@@ -101,7 +101,7 @@ CREATE OPERATOR citus_mx_test_schema.=== (
 );
 
 SET search_path TO public;
-CREATE COLLATION citus_mx_test_schema.english FROM "en_US";
+CREATE COLLATION citus_mx_test_schema.english (LOCALE="us");
 
 SET search_path TO public;
 CREATE TYPE citus_mx_test_schema.new_composite_type as (key1 text, key2 text);
@@ -155,7 +155,7 @@ CREATE OPERATOR citus_mx_test_schema.=== (
 
 
 SET search_path TO public;
-CREATE COLLATION citus_mx_test_schema.english FROM "en_US";
+CREATE COLLATION citus_mx_test_schema.english (LOCALE="us");
 
 SET search_path TO public;
 CREATE TYPE citus_mx_test_schema.new_composite_type as (key1 text, key2 text);
