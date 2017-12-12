@@ -17,7 +17,7 @@ use warnings;
 use Fcntl;
 use Getopt::Long;
 use File::Spec::Functions;
-use File::Path qw(make_path);
+use File::Path qw(make_path remove_tree);
 use Config;
 
 sub Usage()
@@ -315,23 +315,40 @@ for my $option (@userPgOptions)
 %fdwServers = ('fake_fdw_server', 'fake_fdw');
 
 # Cleanup leftovers and prepare directories for the run
-system("rm", ('-rf', catfile('tmp_check', 'tmp-bin'))) == 0 or die "Could not remove tmp-bin directory";
-
-system("rm", ('-rf', catfile('tmp_check', 'master'))) == 0 or die "Could not remove master directory";
-for my $port (@workerPorts)
+if (-e catfile('tmp_check', 'tmp-bin'))
 {
-    system("rm", ('-rf', catfile("tmp_check", "worker.$port"))) == 0 or die "Could not remove worker directory";
+	remove_tree(catfile('tmp_check', 'tmp-bin')) or die "Could not remove tmp-bin directory";
 }
 
-system("rm", ('-rf', catfile('tmp_check', 'master-follower'))) == 0 or die "Could not remove master directory";
+if (-e catfile('tmp_check', 'master'))
+{
+	remove_tree(catfile('tmp_check', 'master')) or die "Could not remove master directory";
+}
+
+for my $port (@workerPorts)
+{
+	if (-e catfile("tmp_check", "worker.$port"))
+	{
+    		remove_tree(catfile("tmp_check", "worker.$port")) or die "Could not remove worker directory";
+	}
+}
+
+if (-e catfile("tmp_check", "master-follower"))
+{
+	remove_tree(catfile("tmp_check", "master-follower")) or die "Could not remove master directory";
+}
+
 for my $port (@followerWorkerPorts)
 {
-    system("rm", ('-rf', catfile("tmp_check", "follower.$port"))) == 0 or die "Could not remove worker directory";
+	if (-e catfile("tmp_check", "follower.$port"))
+	{
+	    remove_tree(catfile("tmp_check", "follower.$port")) or die "Could not remove worker directory";
+	}
 }
 
 # Prepare directory in which 'psql' has some helpful variables for locating the workers
-system("mkdir", ('-p', catfile("tmp_check", "tmp-bin"))) == 0
-	or die "Could not create tmp-bin directory";
+make_path(catfile("tmp_check", "tmp-bin")) or die "Could not create tmp_bin directory $!\n";
+
 my $psql_name = "psql";
 if ($usingWindows)
 {
@@ -400,11 +417,23 @@ if ($followercluster)
   close $fd;
 }
 
-for my $port (@workerPorts)
+if ($usingWindows)
 {
-    system("cp", ("-a", catfile("tmp_check", "master", "data"), catfile("tmp_check", "worker.$port", "data"))) == 0
-        or die "Could not create worker data directory";
+	for my $port (@workerPorts)
+	{
+		system(catfile("$bindir", "initdb"), ("--nosync", "-U", $user, "--encoding", "UTF8", catfile("tmp_check", "worker.$port", "data"))) == 0
+		    or die "Could not create worker data directory";
+	}	
 }
+else
+{
+	for my $port (@workerPorts)
+	{
+	    system("cp", ("-a", catfile("tmp_check", "master", "data"), catfile("tmp_check", "worker.$port", "data"))) == 0
+	        or die "Could not create worker data directory";
+	}
+}
+
 
 # Routine to shutdown servers at failure/exit
 sub ShutdownServers()
