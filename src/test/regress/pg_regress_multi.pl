@@ -18,7 +18,7 @@ use Fcntl;
 use Getopt::Long;
 use File::Spec::Functions;
 use File::Path qw(make_path);
-
+use Config;
 
 sub Usage()
 {
@@ -69,6 +69,12 @@ my $pgCtlTimeout = undef;
 my $connectionTimeout = 5000;
 
 my $serversAreShutdown = "TRUE";
+my $usingWindows = 0;
+
+if ($Config{osname} eq "MSWin32")
+{
+	$usingWindows = 1;
+};
 
 GetOptions(
     'isolationtester' => \$isolationtester,
@@ -119,8 +125,20 @@ if (defined $bindir)
 # a bit more context to make it easier to locate failed test sections.
 $ENV{PG_REGRESS_DIFF_OPTS} = '-dU10';
 
-my $plainRegress = "C:\\Users\\Administrator\\Downloads\\patched-postgres\\Debug\\pg_regress\\pg_regress.exe";
-my $isolationRegress = catfile("${postgresBuilddir}", "src", "test", "isolation", "pg_isolation_regress");
+my $plainRegress = "";
+my $isolationRegress = "";
+
+if ($usingWindows)
+{
+	$plainRegress = "$bindir\\pg_regress.exe";
+	$isolationRegress = "$bindir\\pg_isolation_regress.exe";
+}
+else
+{
+	$plainRegress = "$pgxsdir/src/test/regress/pg_regress";
+	$isolationRegress = "${postgresBuilddir}/src/test/isolation/pg_isolation_regress";
+}
+
 if ($isolationtester && ! -f "$isolationRegress")
 {
     die <<"MESSAGE";
@@ -314,9 +332,18 @@ for my $port (@followerWorkerPorts)
 # Prepare directory in which 'psql' has some helpful variables for locating the workers
 system("mkdir", ('-p', catfile("tmp_check", "tmp-bin"))) == 0
 	or die "Could not create tmp-bin directory";
-sysopen my $fh, catfile("tmp_check", "tmp-bin", "psql.cmd"), O_CREAT|O_TRUNC|O_RDWR, 0700
+my $psql_name = "psql";
+if ($usingWindows)
+{
+	$psql_name = "psql.cmd";
+}
+
+sysopen my $fh, catfile("tmp_check", "tmp-bin", $psql_name), O_CREAT|O_TRUNC|O_RDWR, 0700
 	or die "Could not create psql wrapper";
-print $fh "\@echo off\n";
+if ($usingWindows)
+{ 
+    print $fh "\@echo off\n";
+}
 print $fh catfile($bindir, "psql")." ";
 print $fh "--variable=master_port=$masterPort ";
 print $fh "--variable=follower_master_port=$followerCoordPort ";
@@ -332,8 +359,15 @@ for my $workeroff (0 .. $#followerWorkerPorts)
 	my $port = $followerWorkerPorts[$workeroff];
 	print $fh "--variable=follower_worker_".($workeroff+1)."_port=$port ";
 }
-#print $fh "\$@\n"; # pass on the commandline arguments
-print $fh "%*\n"; # pass on the commandline arguments
+
+if ($usingWindows)
+{
+	print $fh "%*\n"; # pass on the commandline arguments
+}
+else
+{
+	print $fh "\"\$@\"\n"; # pass on the commandline arguments
+}
 close $fh;
 
 make_path(catfile('tmp_check', 'master', 'log')) or die 'Could not create master directory';
@@ -516,7 +550,7 @@ for my $port (@workerPorts)
     {
         system(catfile($bindir, "psql"),
                ('-X', '-h', $host, '-p', $port, '-U', $user, "-d", "regression",
-                '-c', "\"CREATE EXTENSION IF NOT EXISTS \\\"$extension\\\";\"")) == 0
+                '-c', "CREATE EXTENSION IF NOT EXISTS $extension;")) == 0
             or die "Could not create extension on worker";
     }
 
