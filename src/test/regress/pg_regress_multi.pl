@@ -379,6 +379,16 @@ for my $workeroff (0 .. $#followerWorkerPorts)
 
 if ($usingWindows)
 {
+	print $fh "--variable=dev_null=\"/nul\" ";
+}
+else
+{
+	print $fh "--variable=dev_null=\"/dev/null\" ";	
+}
+
+
+if ($usingWindows)
+{
 	print $fh "%*\n"; # pass on the commandline arguments
 }
 else
