@@ -34,7 +34,7 @@ shallow_clone: true                 # default is "false"
 # scripts which run after cloning repository
 install:
   - git clone -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
-  - git -C C:\projects\citus apply C:\projects\citus\windows\Mkvcbuild.pm.patch
+  - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
   - move C:\projects\citus C:\projects\postgres\contrib\citus
 
 #---------------------------------#
