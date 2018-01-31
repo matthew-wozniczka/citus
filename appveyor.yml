@@ -46,7 +46,8 @@ configuration:
   - Release
 
 build_script:
-  - C:\projects\postgres\src\tools\msvc\build RELEASE
+  - ps: cd C:\projects\postgres\src\tools\msvc
+  - build RELEASE
 
 #---------------------------------#
 #       tests configuration       #
