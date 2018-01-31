@@ -35,7 +35,7 @@ shallow_clone: true                 # default is "false"
 install:
   - git clone -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
   - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
-  - move C:\projects\citus C:\projects\postgres\contrib\citus
+  - xcopy C:\projects\citus C:\projects\postgres\contrib\citus
 
 #---------------------------------#
 #       build configuration       #
