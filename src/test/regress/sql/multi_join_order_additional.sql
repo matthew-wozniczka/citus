@@ -82,14 +82,6 @@ EXPLAIN SELECT count(*) FROM lineitem, orders
 EXPLAIN SELECT l_quantity FROM lineitem, orders
 	WHERE (l_orderkey = o_orderkey OR l_quantity > 5);
 
--- The below queries modify the partition method (TODO: Remove as another commit) in pg_dist_partition. We thus
--- begin a transaction here so the changes don't impact any other parallel
--- running tests.
-BEGIN;
-
--- Validate that we take into account the partition method when building the
--- join-order plan.
-
 EXPLAIN SELECT count(*) FROM orders, lineitem_hash
 	WHERE o_orderkey = l_orderkey;
 
@@ -115,8 +107,6 @@ EXPLAIN SELECT count(*) FROM orders, customer_hash
 -- range partitioned one.
 EXPLAIN SELECT count(*) FROM orders_hash, customer
 	WHERE c_custkey = o_custkey;
-
-COMMIT;
 
 -- Reset client logging level to its previous value
 

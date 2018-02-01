@@ -121,12 +121,6 @@ EXPLAIN SELECT l_quantity FROM lineitem, orders
 LOG:  join order: [ "lineitem" ][ cartesian product "orders" ]
 ERROR:  cannot perform distributed planning on this query
 DETAIL:  Cartesian products are currently unsupported
--- The below queries modify the partition method (TODO: Remove as another commit) in pg_dist_partition. We thus
--- begin a transaction here so the changes don't impact any other parallel
--- running tests.
-BEGIN;
--- Validate that we take into account the partition method when building the
--- join-order plan.
 EXPLAIN SELECT count(*) FROM orders, lineitem_hash
 	WHERE o_orderkey = l_orderkey;
 LOG:  join order: [ "orders" ][ single partition join "lineitem_hash" ]
@@ -195,7 +189,6 @@ LOG:  join order: [ "orders_hash" ][ reference join "customer" ]
          explain statements for distributed queries are not enabled
 (3 rows)
 
-COMMIT;
 -- Reset client logging level to its previous value
 SET client_min_messages TO NOTICE;
 DROP TABLE lineitem_hash;
