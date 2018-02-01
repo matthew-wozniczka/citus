@@ -133,14 +133,12 @@ SELECT * FROM articles WHERE author_id IN (SELECT id FROM authors WHERE name LIK
 
 -- subqueries are supported in FROM clause
 
-SET citus.large_table_shard_count TO 1;
 SET citus.task_executor_type TO "task-tracker";
 
 SELECT articles.id,test.word_count
 FROM articles, (SELECT id, word_count FROM articles) AS test WHERE test.id = articles.id
 ORDER BY articles.id;
 
-RESET citus.large_table_shard_count;
 RESET citus.task_executor_type;
 
 -- subqueries are not supported in SELECT clause
@@ -218,7 +216,6 @@ SELECT o_orderstatus, sum(l_linenumber), avg(l_linenumber) FROM lineitem, orders
 
 -- now, test the cases where Citus do or do not need to create
 -- the master queries
-SET citus.large_table_shard_count TO 2;
 SET client_min_messages TO 'DEBUG2';
 SET citus.task_executor_type TO 'real-time';
 

@@ -69,9 +69,6 @@ SELECT master_create_worker_shards('customer_hash', 2, 1);
 EXPLAIN SELECT l1.l_quantity FROM lineitem l1, lineitem l2
 	WHERE l1.l_orderkey = l2.l_orderkey AND l1.l_quantity > 5;
 
--- Update configuration to treat lineitem and orders tables as large
-
-SET citus.large_table_shard_count TO 2;
 SET client_min_messages TO LOG;
 
 -- The following queries check that we correctly handle joins and OR clauses. In
@@ -85,7 +82,7 @@ EXPLAIN SELECT count(*) FROM lineitem, orders
 EXPLAIN SELECT l_quantity FROM lineitem, orders
 	WHERE (l_orderkey = o_orderkey OR l_quantity > 5);
 
--- The below queries modify the partition method in pg_dist_partition. We thus
+-- The below queries modify the partition method (TODO: Remove as another commit) in pg_dist_partition. We thus
 -- begin a transaction here so the changes don't impact any other parallel
 -- running tests.
 BEGIN;
@@ -103,9 +100,6 @@ EXPLAIN SELECT count(*) FROM orders_hash, lineitem_hash
 -- Validate that we can handle broadcast joins with hash-partitioned tables.
 EXPLAIN SELECT count(*) FROM customer_hash, nation
 	WHERE c_nationkey = n_nationkey;
-
--- Update the large table shard count for all the following tests.
-SET citus.large_table_shard_count TO 1;
 
 -- Validate that we don't use a single-partition join method for a hash
 -- re-partitioned table, thus preventing a partition of just the customer table.
