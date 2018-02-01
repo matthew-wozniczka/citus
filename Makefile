@@ -44,7 +44,6 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/planner/multi_logical_planner.o \
      src/backend/distributed/planner/multi_master_planner.o \
      src/backend/distributed/planner/multi_physical_planner.o \
-     src/backend/distributed/planner/multi_planner.o \
      src/backend/distributed/planner/multi_router_planner.o \
      src/backend/distributed/planner/relation_restriction_equivalence.o \
      src/backend/distributed/planner/shard_pruning.o \
