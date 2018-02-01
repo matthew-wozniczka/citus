@@ -36,6 +36,7 @@ install:
   - git clone --depth 1 -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
   - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
   - xcopy /i C:\projects\citus C:\projects\postgres\contrib\citus
+  - '"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"'
 
 #---------------------------------#
 #       build configuration       #
