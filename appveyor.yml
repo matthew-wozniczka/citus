@@ -33,6 +33,11 @@ shallow_clone: true                 # default is "false"
 
 # scripts which run after cloning repository
 install:
+  # add flex/bison to path
+  - set PATH=%PATH%;C:\msys64\usr\bin
+  - flex --version
+  - bison --version
+  # make postgres think we're a contrib module
   - git clone --depth 1 -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
   - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
   - xcopy /i C:\projects\citus C:\projects\postgres\contrib\citus
