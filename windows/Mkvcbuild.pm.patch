@@ -19,7 +19,7 @@ index 4c2e12e..82f3ab1 100644
 -my $contrib_extralibs      = undef;
 -my $contrib_extraincludes = { 'dblink' => ['src/backend'] };
 +my $contrib_extralibs      = { 'citus' => ['ws2_32.lib']};
-+my $contrib_extraincludes = { 'dblink' => ['src/backend'], 'citus' => ['contrib/citus/src/include'] };
++my $contrib_extraincludes = { 'dblink' => ['src/backend'], 'citus' => ['contrib/citus/src/include', 'contrib/citus/windows/include'] };
  my $contrib_extrasource = {
  	'cube' => [ 'contrib/cube/cubescan.l', 'contrib/cube/cubeparse.y' ],
  	'seg'  => [ 'contrib/seg/segscan.l',   'contrib/seg/segparse.y' ], };
