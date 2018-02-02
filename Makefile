@@ -14,7 +14,9 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/connection/connection_management.o \
      src/backend/distributed/connection/placement_connection.o \
      src/backend/distributed/connection/remote_commands.o \
+     src/backend/distributed/executor/citus_custom_scan.o \
      src/backend/distributed/executor/insert_select_executor.o \
+     src/backend/distributed/executor/intermediate_results.o \
      src/backend/distributed/executor/multi_client_executor.o \
      src/backend/distributed/executor/multi_executor.o \
      src/backend/distributed/executor/multi_real_time_executor.o \
@@ -22,6 +24,7 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/executor/multi_server_executor.o \
      src/backend/distributed/executor/multi_task_tracker_executor.o \
      src/backend/distributed/executor/multi_utility.o \
+     src/backend/distributed/executor/subplan_execution.o \
      src/backend/distributed/master/citus_create_restore_point.o \
      src/backend/distributed/master/master_citus_tools.o \
      src/backend/distributed/master/master_create_shards.o \
@@ -37,6 +40,7 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/master/worker_node_manager.o \
      src/backend/distributed/metadata/metadata_sync.o \
      src/backend/distributed/planner/deparse_shard_query.o \
+     src/backend/distributed/planner/distributed_planner.o \
      src/backend/distributed/planner/insert_select_planner.o \
      src/backend/distributed/planner/multi_explain.o \
      src/backend/distributed/planner/multi_join_order.o \
@@ -45,6 +49,8 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/planner/multi_master_planner.o \
      src/backend/distributed/planner/multi_physical_planner.o \
      src/backend/distributed/planner/multi_router_planner.o \
+     src/backend/distributed/planner/postgres_planning_functions.o \
+     src/backend/distributed/planner/recursive_planning.o \
      src/backend/distributed/planner/relation_restriction_equivalence.o \
      src/backend/distributed/planner/shard_pruning.o \
      src/backend/distributed/progress/multi_progress.o \
@@ -89,6 +95,7 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/utils/ruleutils_10.o \
      src/backend/distributed/utils/ruleutils_96.o \
      src/backend/distributed/utils/shardinterval_utils.o \
+     src/backend/distributed/utils/statistics_collection.o \
      src/backend/distributed/worker/task_tracker.o \
      src/backend/distributed/worker/task_tracker_protocol.o \
      src/backend/distributed/worker/worker_data_fetch_protocol.o \
