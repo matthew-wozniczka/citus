@@ -47,6 +47,7 @@ install:
   - git clone --depth 1 -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
   - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
   # only build Citus, don't build the other contrib modules
+  - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild-minimize.patch
   - rmdir /s /q C:\projects\postgres\contrib
   - mkdir C:\projects\postgres\contrib
   - xcopy /i /e C:\projects\citus C:\projects\postgres\contrib\citus
