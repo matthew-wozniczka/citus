@@ -44,7 +44,7 @@ install:
   - flex --version
   - bison --version
   # we need this for usage reporting
-  - vcpkg install curl
+  - vcpkg install curl:x64-windows
   - vcpkg owns curl.h
   # make postgres think we're a contrib module
   - git clone --depth 1 -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
