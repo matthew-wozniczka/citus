@@ -20,6 +20,7 @@ max_jobs: 1
 
 cache:
   - C:\tools\vcpkg\installed\
+  - C:\Tools\vcpkg\installed\
 
 # Build worker image (VM template)
 image: Visual Studio 2017
@@ -41,8 +42,7 @@ install:
   - flex --version
   - bison --version
   # we need this for usage reporting
-  #- vcpkg install curl
-  #- vcpkg integrate install  # add vcpkg to the include path
+  - vcpkg install curl
   # make postgres think we're a contrib module
   - git clone --depth 1 -b REL_10_STABLE https://github.com/postgres/postgres C:\projects\postgres
   - git -C C:\projects\postgres apply C:\projects\citus\windows\Mkvcbuild.pm.patch
