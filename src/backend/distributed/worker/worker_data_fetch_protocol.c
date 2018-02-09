@@ -526,42 +526,6 @@ worker_apply_sequence_command(PG_FUNCTION_ARGS)
 }
 
 
-/*
- * worker_fetch_regular_table UDF is a stub UDF to install Citus flawlessly.
- * Otherwise we need to delete them from our sql files, which is confusing
- */
-Datum
-worker_fetch_regular_table(PG_FUNCTION_ARGS)
-{
-	ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("this function is deprecated and no longer is used")));
-}
-
-
-/*
- * worker_fetch_foreign_file UDF is a stub UDF to install Citus flawlessly.
- * Otherwise we need to delete them from our sql files, which is confusing
- */
-Datum
-worker_fetch_foreign_file(PG_FUNCTION_ARGS)
-{
-	ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("this function is deprecated and no longer is used")));
-}
-
-
-/*
- * master_expire_table_cache UDF is a stub UDF to install Citus flawlessly.
- * Otherwise we need to delete them from our sql files, which is confusing
- */
-Datum
-master_expire_table_cache(PG_FUNCTION_ARGS)
-{
-	ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("this function is deprecated and no longer is used")));
-}
-
-
 /* Extracts shard id from the given table name, and returns it. */
 static uint64
 ExtractShardId(const char *tableName)
@@ -974,4 +938,40 @@ SetDefElemArg(AlterSeqStmt *statement, const char *name, Node *arg)
 #endif
 
 	statement->options = lappend(statement->options, defElem);
+}
+
+
+/*
+ * worker_fetch_regular_table UDF is a stub UDF to install Citus flawlessly.
+ * Otherwise we need to delete them from our sql files, which is confusing
+ */
+Datum
+worker_fetch_regular_table(PG_FUNCTION_ARGS)
+{
+	ereport(DEBUG2, (errmsg("this function is deprecated and no longer is used")));
+	PG_RETURN_VOID();
+}
+
+
+/*
+ * worker_fetch_foreign_file UDF is a stub UDF to install Citus flawlessly.
+ * Otherwise we need to delete them from our sql files, which is confusing
+ */
+Datum
+worker_fetch_foreign_file(PG_FUNCTION_ARGS)
+{
+	ereport(DEBUG2, (errmsg("this function is deprecated and no longer is used")));
+	PG_RETURN_VOID();
+}
+
+
+/*
+ * master_expire_table_cache UDF is a stub UDF to install Citus flawlessly.
+ * Otherwise we need to delete them from our sql files, which is confusing
+ */
+Datum
+master_expire_table_cache(PG_FUNCTION_ARGS)
+{
+	ereport(DEBUG2, (errmsg("this function is deprecated and no longer is used")));
+	PG_RETURN_VOID();
 }
