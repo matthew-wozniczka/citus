@@ -3829,11 +3829,13 @@ SubqueryPushdownMultiNodeTree(Query *queryTree)
  * This is a problem when one of them is inside the group by clause and the
  * other is not. Postgres is smart about it to detect that both target columns
  * resolve to the same thing, and allows a single group by clause to cover
- * both target entries. We want to make sure we provide correct varno/varattno
+ * both target entries when standard planner is called. Since we operate on
+ * the original query, we want to make sure we provide correct varno/varattno
  * values to Postgres so that it could produce valid query.
  *
  * Only exception is that, if a join is given an alias name, we do not want to
- * flatten those var's.
+ * flatten those var's. If we do, deparsing fails since it expects to see a join
+ * alias, and cannot access the RTE in the join tree by their names.
  *
  */
 static void
@@ -3846,23 +3848,31 @@ FlattenJoinVars(List *columnList, Query *queryTree)
 	{
 		Var *column = (Var *) lfirst(columnCell);
 		RangeTblEntry *columnRte = NULL;
+		PlannerInfo *root = NULL;
 
 		Assert(IsA(column, Var));
 
 		/*
-		 * if join has an alias, it is copied over join rte. There is
-		 * no need to find the JoinExpr to check whether it has
+		 * if join does not have an alias, it is copied over join rte.
+		 * There is no need to find the JoinExpr to check whether it has
 		 * an alias defined.
+		 *
+		 * We use the planner's flatten_join_alias_vars routine to do
+		 * the flattening; it wants a PlannerInfo root node, which
+		 * fortunately can be mostly dummy.
 		 */
 		columnRte = rt_fetch(column->varno, rteList);
 		if (columnRte->rtekind == RTE_JOIN && columnRte->alias == NULL)
 		{
-			PlannerInfo *root = makeNode(PlannerInfo);
 			Var *normalizedVar = NULL;
 
-			root->parse = (queryTree);
-			root->planner_cxt = CurrentMemoryContext;
-			root->hasJoinRTEs = true;
+			if (root == NULL)
+			{
+				root = makeNode(PlannerInfo);
+				root->parse = (queryTree);
+				root->planner_cxt = CurrentMemoryContext;
+				root->hasJoinRTEs = true;
+			}
 
 			normalizedVar = (Var *) flatten_join_alias_vars(root, (Node *) column);
 

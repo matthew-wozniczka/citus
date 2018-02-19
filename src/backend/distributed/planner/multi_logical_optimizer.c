@@ -2063,8 +2063,9 @@ HasNonPartitionColumnDistinctAgg(List *targetEntryList, Node *havingQual,
 	List *targetVarList = pull_var_clause((Node *) targetEntryList,
 										  PVC_INCLUDE_AGGREGATES |
 										  PVC_RECURSE_WINDOWFUNCS);
-	List *havingVarList = pull_var_clause((Node *) havingQual, PVC_INCLUDE_AGGREGATES |
-										  PVC_RECURSE_WINDOWFUNCS);
+
+	/* having clause can't have window functions, no need to recurse for that */
+	List *havingVarList = pull_var_clause((Node *) havingQual, PVC_INCLUDE_AGGREGATES);
 	List *aggregateCheckList = list_concat(targetVarList, havingVarList);
 
 	ListCell *aggregateCheckCell = NULL;
