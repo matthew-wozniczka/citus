@@ -1078,6 +1078,75 @@ LIMIT 5;
        2 |  10
 (5 rows)
 
+/* having clause is also pushed down along with window function */
+SELECT
+	user_id,
+	value_1,
+	SUM(value_2) OVER (PARTITION BY user_id)
+FROM
+	users_table
+GROUP BY
+	user_id,
+	value_1,
+	value_2
+HAVING 
+	count(*) > 2
+ORDER BY
+	3 DESC, 1, 2
+LIMIT 10;
+ user_id | value_1 | sum 
+---------+---------+-----
+       5 |       3 |   3
+       5 |       3 |   3
+       4 |       3 |   2
+       4 |       4 |   2
+(4 rows)
+
+/* a column is in group by but not in target list */
+SELECT
+	user_id,
+	SUM(value_2) OVER (PARTITION BY user_id)
+FROM
+	users_table
+GROUP BY
+	user_id,
+	value_1,
+	value_2
+HAVING 
+	count(*) > 2
+ORDER BY
+	2 DESC, 1
+LIMIT 10;
+ user_id | sum 
+---------+-----
+       5 |   3
+       5 |   3
+       4 |   2
+       4 |   2
+(4 rows)
+
+/* there is distinct on the target list with no group by */
+SELECT
+	DISTINCT value_2, sum (value_1) over (partition by user_id)
+FROM
+	users_table
+ORDER BY
+	2 DESC, 1
+LIMIT 10;
+ value_2 | sum 
+---------+-----
+       0 |  69
+       1 |  69
+       2 |  69
+       3 |  69
+       4 |  69
+       5 |  69
+       0 |  63
+       1 |  63
+       2 |  63
+       3 |  63
+(10 rows)
+
 WITH users_events AS
 (
 	SELECT

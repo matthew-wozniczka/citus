@@ -1853,6 +1853,7 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	bool enableLimitPushdown = true;
 	bool hasNonPartitionColumnDistinctAgg = false;
 	bool repartitionSubquery = false;
+	bool hasWindowFunction = originalOpNode->hasWindowFuncs;
 
 	walkerContext->expressionList = NIL;
 
@@ -2033,8 +2034,15 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	/*
 	 * If grouped by a partition column whose values are shards have disjoint sets
 	 * of partition values, we can push down the having qualifier.
+	 *
+	 * When a query with subquery is provided, we can't determine if
+	 * groupedByDisjointPartitionColumn, therefore we also check if there is a
+	 * window function too. If there is a window function we would know that it
+	 * is safe to push down (i.e. it is partitioned on distribution column, and
+	 * if there is a group by, it contains distribution column).
+	 *
 	 */
-	if (havingQual != NULL && groupedByDisjointPartitionColumn)
+	if (havingQual != NULL && (groupedByDisjointPartitionColumn || hasWindowFunction))
 	{
 		workerExtendedOpNode->havingQual = originalOpNode->havingQual;
 	}
