@@ -813,11 +813,11 @@ WaitInfo *
 MultiClientCreateWaitInfo(int maxConnections)
 {
 	WaitInfo *waitInfo = palloc(sizeof(WaitInfo));
-	const int MAX_WAIT_EVENT_COUNT = 50;
 
-	if (maxConnections > MAX_WAIT_EVENT_COUNT)
+	/* we subtract 2 to make room for the WL_POSTMASTER_DEATH and WL_LATCH_SET events */
+	if (maxConnections > FD_SETSIZE - 2)
 	{
-		maxConnections = MAX_WAIT_EVENT_COUNT;
+		maxConnections = FD_SETSIZE - 2;
 	}
 
 	waitInfo->maxWaiters = maxConnections;

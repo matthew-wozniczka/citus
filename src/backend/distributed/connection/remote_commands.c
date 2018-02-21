@@ -994,11 +994,11 @@ BuildWaitEventSet(MultiConnection **allConnections, int totalConnectionCount,
 	int pendingConnectionCount = totalConnectionCount - pendingConnectionsStartIndex;
 	WaitEventSet *waitEventSet = NULL;
 	int connectionIndex = 0;
-	const int MAX_WAIT_EVENT_COUNT = 50;
 
-	if (pendingConnectionCount > MAX_WAIT_EVENT_COUNT)
+	/* we subtract 2 to make room for the WL_POSTMASTER_DEATH and WL_LATCH_SET events */
+	if (pendingConnectionCount > FD_SETSIZE - 2)
 	{
-		pendingConnectionCount = MAX_WAIT_EVENT_COUNT;
+		pendingConnectionCount = FD_SETSIZE - 2;
 	}
 
 	/* allocate pending connections + 2 for the signal latch and postmaster death */
