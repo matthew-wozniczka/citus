@@ -3836,7 +3836,6 @@ SubqueryPushdownMultiNodeTree(Query *queryTree)
  * Only exception is that, if a join is given an alias name, we do not want to
  * flatten those var's. If we do, deparsing fails since it expects to see a join
  * alias, and cannot access the RTE in the join tree by their names.
- *
  */
 static void
 FlattenJoinVars(List *columnList, Query *queryTree)

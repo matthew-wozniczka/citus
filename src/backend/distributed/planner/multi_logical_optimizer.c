@@ -1292,7 +1292,8 @@ MasterExtendedOpNode(MultiExtendedOp *originalOpNode,
 		Expr *newExpression = NULL;
 
 		bool hasAggregates = contain_agg_clause((Node *) originalExpression);
-		if (hasAggregates)
+		bool hasWindowFunction = contain_window_function((Node *) originalExpression);
+		if (hasAggregates && !hasWindowFunction)
 		{
 			Node *newNode = MasterAggregateMutator((Node *) originalExpression,
 												   walkerContext);
@@ -1853,7 +1854,7 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	bool enableLimitPushdown = true;
 	bool hasNonPartitionColumnDistinctAgg = false;
 	bool repartitionSubquery = false;
-	bool hasWindowFunction = originalOpNode->hasWindowFuncs;
+	bool queryHasWindowFunction = originalOpNode->hasWindowFuncs;
 
 	walkerContext->expressionList = NIL;
 
@@ -1890,12 +1891,18 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 		List *newExpressionList = NIL;
 		ListCell *newExpressionCell = NULL;
 		bool hasAggregates = contain_agg_clause((Node *) originalExpression);
+		bool hasWindowFunction = contain_window_function((Node *) originalExpression);
 
 		/* reset walker context */
 		walkerContext->expressionList = NIL;
 		walkerContext->createGroupByClause = false;
 
-		if (hasAggregates)
+		/*
+		 * If the expression uses aggregates inside window function contain agg
+		 * clause still returns true. We want to make sure it is not a part of
+		 * window function before we proceed.
+		 */
+		if (hasAggregates && !hasWindowFunction)
 		{
 			WorkerAggregateWalker((Node *) originalExpression, walkerContext);
 
@@ -2042,7 +2049,8 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	 * if there is a group by, it contains distribution column).
 	 *
 	 */
-	if (havingQual != NULL && (groupedByDisjointPartitionColumn || hasWindowFunction))
+	if (havingQual != NULL &&
+		(groupedByDisjointPartitionColumn || queryHasWindowFunction))
 	{
 		workerExtendedOpNode->havingQual = originalOpNode->havingQual;
 	}
