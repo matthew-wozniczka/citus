@@ -21,12 +21,6 @@
 #ifdef HAVE_POLL_H
 #include <poll.h>
 #endif
-#ifdef HAVE_SYS_POLL_H
-#include <sys/poll.h>
-#endif
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif
 
 #define INVALID_CONNECTION_ID -1  /* identifies an invalid connection */
 #define MAX_CONNECTION_COUNT 2048 /* simultaneous client connection count */
