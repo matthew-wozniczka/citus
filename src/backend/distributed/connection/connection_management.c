@@ -10,10 +10,6 @@
 
 #include "postgres.h"
 
-#undef HAVE_POLL
-#undef HAVE_POLL_H
-#undef HAVE_SYS_POLL_H
-
 #ifdef HAVE_POLL_H
 #include <poll.h>
 #endif
