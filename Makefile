@@ -106,10 +106,10 @@ OBJS = src/backend/distributed/shared_library_init.o \
      src/backend/distributed/worker/worker_truncate_trigger_protocol.o \
      $(WIN32RES)
 
-undefine EXTENSION
-undefine DATA
-undefine MODULE_big
-undefine OBJS
+EXTENSION=
+DATA=
+MODULE_big=
+OBJS=
 
 # the above is so that builds can work on Windows, the below is for all other platforms
 
