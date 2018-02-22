@@ -37,6 +37,7 @@ static PlannedStmt * BuildSelectStatement(Query *masterQuery, List *masterTarget
 static Agg * BuildAggregatePlan(Query *masterQuery, Plan *subPlan);
 static bool HasDistinctAggregate(Query *masterQuery);
 static Plan * BuildDistinctPlan(Query *masterQuery, Plan *subPlan);
+static bool IsGroupBySubsetOfDistinct(Query *masterQuery);
 
 
 /*
@@ -397,14 +398,30 @@ BuildDistinctPlan(Query *masterQuery, Plan *subPlan)
 	bool distinctClausesHashable = true;
 	List *distinctClauseList = masterQuery->distinctClause;
 	List *targetList = copyObject(masterQuery->targetList);
-	List *columnList = pull_var_clause_default((Node *) targetList);
+	List *columnList = NIL;
 	ListCell *columnCell = NULL;
 	bool hasDistinctAggregate = false;
 
+
 	if (IsA(subPlan, Agg))
 	{
-		return subPlan;
+		/*
+		 * We don't need to add distinct plan if all of the columns used in group by
+		 * clause also used in distinct clause and we have an aggregation plan node.
+		 */
+		if (IsGroupBySubsetOfDistinct(masterQuery))
+		{
+			return subPlan;
+		}
+
+		/*
+		 * If the previous plan is an aggregation plan, don't use aggregation functions
+		 * in the target list of the distinct plan.
+		 */
+		targetList = MasterTargetList(targetList);
 	}
+
+	columnList = pull_var_clause_default((Node *) targetList);
 
 	Assert(masterQuery->distinctClause);
 	Assert(!masterQuery->hasDistinctOn);
@@ -450,4 +467,42 @@ BuildDistinctPlan(Query *masterQuery, Plan *subPlan)
 	}
 
 	return distinctPlan;
+}
+
+
+/*
+ * IsGroupBySubsetOfDistinct checks whether each clause in group clauses also
+ * exists in the distinct clauses.
+ */
+static bool
+IsGroupBySubsetOfDistinct(Query *masterQuery)
+{
+	List *distinctClauses = masterQuery->distinctClause;
+	List *groupClauses = masterQuery->groupClause;
+	ListCell *distinctCell = NULL;
+	ListCell *groupCell = NULL;
+
+	foreach(groupCell, groupClauses)
+	{
+		SortGroupClause *groupClause = (SortGroupClause *) lfirst(groupCell);
+		bool isFound = false;
+
+		foreach(distinctCell, distinctClauses)
+		{
+			SortGroupClause *distinctClause = (SortGroupClause *) lfirst(distinctCell);
+
+			if (groupClause->tleSortGroupRef == distinctClause->tleSortGroupRef)
+			{
+				isFound = true;
+				break;
+			}
+		}
+
+		if (!isFound)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }

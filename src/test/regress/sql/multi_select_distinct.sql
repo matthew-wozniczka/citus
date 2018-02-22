@@ -78,6 +78,55 @@ EXPLAIN (COSTS FALSE)
 
 SET enable_hashagg TO on;
 
+-- distinct on aggregate of group by colunmns
+SELECT DISTINCT count(*)
+	FROM lineitem_hash_part
+	GROUP BY l_suppkey, l_linenumber
+	ORDER BY 1;
+	
+-- explain the query to see actual plan
+EXPLAIN (COSTS FALSE)
+	SELECT DISTINCT count(*)
+		FROM lineitem_hash_part
+		GROUP BY l_suppkey, l_linenumber
+		ORDER BY 1;
+
+-- check the plan if the hash aggreate is disabled
+SET enable_hashagg TO off;
+EXPLAIN (COSTS FALSE)
+	SELECT DISTINCT count(*)
+		FROM lineitem_hash_part
+		GROUP BY l_suppkey, l_linenumber
+		ORDER BY 1;
+
+SET enable_hashagg TO on;
+
+-- in addition to above query we have limit
+SELECT DISTINCT count(*)
+	FROM lineitem_hash_part
+	GROUP BY l_suppkey, l_linenumber
+	ORDER BY 1
+	LIMIT 3;
+	
+-- explain the query to see actual plan
+EXPLAIN (COSTS FALSE)
+	SELECT DISTINCT count(*)
+		FROM lineitem_hash_part
+		GROUP BY l_suppkey, l_linenumber
+		ORDER BY 1
+		LIMIT 3;
+
+-- check the plan if the hash aggreate is disabled
+SET enable_hashagg TO off;
+EXPLAIN (COSTS FALSE)
+	SELECT DISTINCT count(*)
+		FROM lineitem_hash_part
+		GROUP BY l_suppkey, l_linenumber
+		ORDER BY 1
+		LIMIT 3;
+
+SET enable_hashagg TO on;
+
 -- distinct on non-partition column with aggregate
 -- this is the same as non-distinct version due to group by
 SELECT DISTINCT l_partkey, count(*)
