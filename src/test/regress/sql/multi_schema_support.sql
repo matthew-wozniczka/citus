@@ -319,14 +319,17 @@ SELECT * FROM nation_hash;
 
 --test COLLATION with schema
 SET search_path TO public;
+CREATE collation "en_US" (locale = "us");
 CREATE COLLATION test_schema_support.english FROM "en_US";
 
 -- create COLLATION in worker node 1 in schema
 \c - - - :worker_1_port
+CREATE collation "en_US" (locale = "us");
 CREATE COLLATION test_schema_support.english FROM "en_US";
 
 -- create COLLATION in worker node 2 in schema
 \c - - - :worker_2_port
+CREATE collation "en_US" (locale = "us");
 CREATE COLLATION test_schema_support.english FROM "en_US";
 
 \c - - - :master_port
