@@ -37,6 +37,7 @@ static PlannedStmt * BuildSelectStatement(Query *masterQuery, List *masterTarget
 static Agg * BuildAggregatePlan(Query *masterQuery, Plan *subPlan);
 static bool HasDistinctAggregate(Query *masterQuery);
 static Plan * BuildDistinctPlan(Query *masterQuery, Plan *subPlan);
+static List * PrepareTargetListForNextPlan(List *targetList);
 static bool IsGroupBySubsetOfDistinct(Query *masterQuery);
 
 
@@ -398,8 +399,6 @@ BuildDistinctPlan(Query *masterQuery, Plan *subPlan)
 	bool distinctClausesHashable = true;
 	List *distinctClauseList = masterQuery->distinctClause;
 	List *targetList = copyObject(masterQuery->targetList);
-	List *columnList = NIL;
-	ListCell *columnCell = NULL;
 	bool hasDistinctAggregate = false;
 
 
@@ -413,28 +412,13 @@ BuildDistinctPlan(Query *masterQuery, Plan *subPlan)
 		{
 			return subPlan;
 		}
-
-		/*
-		 * If the previous plan is an aggregation plan, don't use aggregation functions
-		 * in the target list of the distinct plan.
-		 */
-		targetList = MasterTargetList(targetList);
 	}
 
-	columnList = pull_var_clause_default((Node *) targetList);
+	/*TODO: add comment */
+	targetList = PrepareTargetListForNextPlan(targetList);
 
 	Assert(masterQuery->distinctClause);
 	Assert(!masterQuery->hasDistinctOn);
-
-	/*
-	 * For upper level plans above the sequential scan, the planner expects the
-	 * table id (varno) to be set to OUTER_VAR.
-	 */
-	foreach(columnCell, columnList)
-	{
-		Var *column = (Var *) lfirst(columnCell);
-		column->varno = OUTER_VAR;
-	}
 
 	/*
 	 * Create group by plan with HashAggregate if all distinct
@@ -467,6 +451,40 @@ BuildDistinctPlan(Query *masterQuery, Plan *subPlan)
 	}
 
 	return distinctPlan;
+}
+
+
+/*
+ * PrepareTargetListForNextPlan handles both regular columns and
+ * aggragetes. returns a new list.
+ *
+ * TODO: fix comment.
+ */
+static List *
+PrepareTargetListForNextPlan(List *targetList)
+{
+	List *newtargetList = NIL;
+	ListCell *targetEntryCell = NULL;
+
+	foreach(targetEntryCell, targetList)
+	{
+		TargetEntry *targetEntry = lfirst(targetEntryCell);
+		TargetEntry *newTargetEntry = NULL;
+		Var *newVar = NULL;
+
+		Assert(IsA(targetEntry, TargetEntry));
+
+		/*
+		 * For upper level plans above the sequential scan, the planner expects the
+		 * table id (varno) to be set to OUTER_VAR.
+		 */
+		newVar = makeVarFromTargetEntry(OUTER_VAR, targetEntry);
+		newTargetEntry = flatCopyTargetEntry(targetEntry);
+		newTargetEntry->expr = (Expr *) newVar;
+		newtargetList = lappend(newtargetList, newTargetEntry);
+	}
+
+	return newtargetList;
 }
 
 
