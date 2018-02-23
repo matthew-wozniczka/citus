@@ -409,7 +409,7 @@ if ($followercluster)
     make_path(catfile('tmp_check', 'master-follower', 'log')) or die "Could not create follower directory";
     for my $port (@followerWorkerPorts)
     {
-        make_path(catfile("tmp_check", "follower.$port", "log")) == 0
+        make_path(catfile("tmp_check", "follower.$port", "log"))
             or die "Could not create worker directory";
     }
 }
