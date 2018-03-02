@@ -1860,7 +1860,8 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 		palloc0(sizeof(WorkerAggregateWalkerContext));
 	Index nextSortGroupRefIndex = 0;
 	bool queryHasAggregates = false;
-	bool enableLimitPushdown = true;
+	bool shouldPushdownOrderByLimit = true;
+	bool shouldPushdownDistinct = true;
 	bool hasNonPartitionColumnDistinctAgg = false;
 	bool repartitionSubquery = false;
 
@@ -1953,7 +1954,7 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 				 * If we introduce new columns accompanied by a new group by clause,
 				 * than pushing down limits will cause incorrect results.
 				 */
-				enableLimitPushdown = false;
+				shouldPushdownOrderByLimit = false;
 			}
 
 			if (newTargetEntry->resname == NULL)
@@ -2017,7 +2018,7 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 				 * If we introduce new columns accompanied by a new group by clause,
 				 * than pushing down limits will cause incorrect results.
 				 */
-				enableLimitPushdown = false;
+				shouldPushdownOrderByLimit = false;
 			}
 
 			newTargetEntryList = lappend(newTargetEntryList, newTargetEntry);
@@ -2030,16 +2031,39 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	workerExtendedOpNode->hasDistinctOn = false;
 	workerExtendedOpNode->hasWindowFuncs = originalOpNode->hasWindowFuncs;
 	workerExtendedOpNode->windowClause = originalOpNode->windowClause;
+	workerExtendedOpNode->groupClauseList = groupClauseList;
 
-	if (!queryHasAggregates)
+	/*
+	 * We are only pushing down distinct on, and limit (along with order by)
+	 * if distinct on clause is superset of group by clause. If there is no
+	 * grouping we are good to pushdown distinct (and orderby/limit). Query
+	 * result depends on order by expression.
+	 */
+	if (shouldPushdownOrderByLimit && originalOpNode->distinctClause &&
+		groupClauseList != NIL)
+	{
+		if (!IsGroupBySubsetOfDistinct(groupClauseList,
+									   originalOpNode->distinctClause))
+		{
+			shouldPushdownOrderByLimit = false;
+		}
+	}
+
+	/*
+	 * Distinct is pushed down to worker query only if the query does not
+	 * contain an aggregate in which master processing might be required to
+	 * complete the final result before distinct operation. We also prevent
+	 * distinct pushdown if there is a condition preventing us from pushing
+	 * down orderby/limit clauses.
+	 */
+	shouldPushdownDistinct = !queryHasAggregates && shouldPushdownOrderByLimit;
+	if (shouldPushdownDistinct)
 	{
 		workerExtendedOpNode->distinctClause = originalOpNode->distinctClause;
 		workerExtendedOpNode->hasDistinctOn = originalOpNode->hasDistinctOn;
 	}
 
-	workerExtendedOpNode->groupClauseList = groupClauseList;
-
-	if (enableLimitPushdown)
+	if (shouldPushdownOrderByLimit)
 	{
 		List *newTargetEntryListForSortClauses = NIL;
 
@@ -3857,4 +3881,51 @@ HasOrderByHllType(List *sortClauseList, List *targetList)
 	}
 
 	return hasOrderByHllType;
+}
+
+
+/*
+ * IsGroupBySubsetOfDistinct checks whether each clause in group clauses also
+ * exists in the distinct clauses. Note that, empty group clause is not a subset
+ * of distinct clause.
+ */
+bool
+IsGroupBySubsetOfDistinct(List *groupClause, List *distinctClause)
+{
+	ListCell *distinctCell = NULL;
+	ListCell *groupCell = NULL;
+
+	/* There must be a group clause */
+	if (list_length(groupClause) == 0)
+	{
+		return false;
+	}
+
+	foreach(groupCell, groupClause)
+	{
+		SortGroupClause *groupClause = (SortGroupClause *) lfirst(groupCell);
+		bool isFound = false;
+
+		foreach(distinctCell, distinctClause)
+		{
+			SortGroupClause *distinctClause = (SortGroupClause *) lfirst(distinctCell);
+
+			if (groupClause->tleSortGroupRef == distinctClause->tleSortGroupRef)
+			{
+				isFound = true;
+				break;
+			}
+		}
+
+		/*
+		 * If we can't find any member of group clause in the distinct clause,
+		 * that means group clause is not a subset of distinct clause.
+		 */
+		if (!isFound)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
