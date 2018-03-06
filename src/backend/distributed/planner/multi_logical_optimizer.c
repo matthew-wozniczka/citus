@@ -1861,7 +1861,6 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	Index nextSortGroupRefIndex = 0;
 	bool queryHasAggregates = false;
 	bool shouldPushdownOrderByLimit = true;
-	bool shouldPushdownDistinct = true;
 	bool hasNonPartitionColumnDistinctAgg = false;
 	bool repartitionSubquery = false;
 
@@ -2034,33 +2033,65 @@ WorkerExtendedOpNode(MultiExtendedOp *originalOpNode,
 	workerExtendedOpNode->groupClauseList = groupClauseList;
 
 	/*
-	 * We are only pushing down distinct on, and limit (along with order by)
-	 * if distinct on clause is superset of group by clause. If there is no
-	 * grouping we are good to pushdown distinct (and orderby/limit). Query
-	 * result depends on order by expression.
+	 * Handle the two cases seperately:
+	 *    (i) Query has DISTINCT or DISTINCT ON along with aggragates in the target list
+	 *    (ii) Query has DISTINCT or DISTINCT ON without aggragates in the target list
+	 *
+	 *  For (i) it is not possible to push DISTINCT/DISTINCT ON because master processing
+	 *  is necessary to calculate the results of the aggregates. We should consider one more
+	 *  thing related to limit pushdown. See details below.
+	 *
+	 *  For (ii) it is sometimes possible to pushdown DISTINCT. See the details below.
 	 */
-	if (shouldPushdownOrderByLimit && originalOpNode->distinctClause &&
-		groupClauseList != NIL)
+	if (originalOpNode->distinctClause && queryHasAggregates)
 	{
-		if (!IsGroupBySubsetOfDistinct(groupClauseList,
-									   originalOpNode->distinctClause))
+		/*
+		 * We can't pushdown limit if the GROUP BY is not a subset of the distinct
+		 * clause. Note that GROUP BY being a subset of DISTINCT guarantees the
+		 * distinctness on the workers.
+		 */
+		if (!(groupClauseList != NIL &&
+			  IsGroupBySubsetOfDistinct(groupClauseList,
+										originalOpNode->distinctClause)))
 		{
 			shouldPushdownOrderByLimit = false;
 		}
 	}
-
-	/*
-	 * Distinct is pushed down to worker query only if the query does not
-	 * contain an aggregate in which master processing might be required to
-	 * complete the final result before distinct operation. We also prevent
-	 * distinct pushdown if there is a condition preventing us from pushing
-	 * down orderby/limit clauses.
-	 */
-	shouldPushdownDistinct = !queryHasAggregates && shouldPushdownOrderByLimit;
-	if (shouldPushdownDistinct)
+	else if (originalOpNode->distinctClause && !queryHasAggregates)
 	{
-		workerExtendedOpNode->distinctClause = originalOpNode->distinctClause;
-		workerExtendedOpNode->hasDistinctOn = originalOpNode->hasDistinctOn;
+		bool pushdownDistinct = false;
+
+		/*
+		 * If there is no GROUP BY, it is safe to pushdown DISTINCT / DISTINCT ON.
+		 *
+		 * If there is GROUP BY, we could only pushdown DISTINCT / DISTINCT ON once the
+		 * GROUP BY is a subset of the distinct clause. Note that GROUP BY being a
+		 * subset of DISTINCT guarantees the distinctness on the workers.
+		 */
+		if (groupClauseList == NIL)
+		{
+			pushdownDistinct = true;
+		}
+		else if (groupClauseList != NIL &&
+				 IsGroupBySubsetOfDistinct(groupClauseList,
+										   originalOpNode->distinctClause))
+		{
+			pushdownDistinct = true;
+		}
+
+		/*
+		 * We can't pushdown LIMIT if we're not pushing down the DISTINCT. Otherwise,
+		 * we might not be able to get the necessary data from the workers.
+		 */
+		if (pushdownDistinct)
+		{
+			workerExtendedOpNode->distinctClause = originalOpNode->distinctClause;
+			workerExtendedOpNode->hasDistinctOn = originalOpNode->hasDistinctOn;
+		}
+		else
+		{
+			shouldPushdownOrderByLimit = false;
+		}
 	}
 
 	if (shouldPushdownOrderByLimit)
